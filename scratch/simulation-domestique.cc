@@ -38,7 +38,8 @@ const uint32_t N_EQUIPMENTS = 32;
 const uint32_t K_TYPES = 10; 
 
 // Durée de la simulation (en secondes)
-const double DUREE_SIMULATION = 600.0; // 10 minutes
+// Note: Pour les tests rapides locaux nous définissons une durée réduite. Remettez à 600.0 pour l'exécution complète.
+const double DUREE_SIMULATION = 30.0; // 30 secondes (test rapide)
 
 // structure globale permet de suivre les récepteurs installés sur un nœud/port spécifique afin de ne pas avoir à le faire.
 static std::map<uint32_t, std::map<uint16_t, Ptr<PacketSink>>> g_installedSinks;
@@ -652,7 +653,8 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     }
 
     // --- 8. Collecte de Traces PCAP ---
-    phyHelper.EnablePcapAll("traces-simulation-domestique", true);
+    // Pour tests rapides, on désactive la capture Pcap afin d'éviter de générer de gros fichiers
+    // phyHelper.EnablePcapAll("traces-simulation-domestique", true);
 
     // --- 8. Lancement de la Simulation ---
     Simulator::Stop (Seconds(DUREE_SIMULATION));
