@@ -5,6 +5,7 @@
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h" 
 #include "ns3/applications-module.h"
+#include "ns3/node-list.h"
 #include "ns3/wifi-module.h" 
 #include "ns3/mobility-module.h"
 #include "ns3/point-to-point-module.h"
@@ -439,8 +440,67 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
             // Affichage dans la console
             std::cout << appType << " (Nœud " << nodeId << ", Port " << port << ") | Reçu: " 
                       << totalReceivedBytes << " Octets | Débit: " 
-                      << std::fixed << std::setprecision(3) << throughputMbps << " Mbps" 
-                      << std::endl;
+                      << std::fixed << std::setprecision(3) << throughputMbps << " Mbps";
+            if (monitor && classifier) {
+                std::cout << " | Perte: " << std::fixed << std::setprecision(3) << lossPct << "% | Délai moyen: " << meanDelayMs << " ms | Jitter moyen: " << meanJitterMs << " ms";
+            }
+            std::cout << std::endl;
+
+            // Recueillir métriques additionnelles si FlowMonitor/Classifier disponibles
+            double lossPct = 0.0;
+            double meanDelayMs = 0.0;
+            double meanJitterMs = 0.0;
+            uint64_t txPacketsAgg = 0, rxPacketsAgg = 0, lostPacketsAgg = 0;
+            uint64_t txBytesAgg = 0, rxBytesAgg = 0;
+            if (monitor && classifier)
+            {
+                // Aggréger les statistiques de flow correspondant à ce sink (destination = node IP & port)
+                Ptr<Node> n = NodeList::GetNode(nodeId);
+                Ipv4Address nodeIp = GetFirstIpv4Address(n);
+                std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
+                for (auto &kv2 : stats)
+                {
+                    FlowId fId = kv2.first;
+                    FlowMonitor::FlowStats fs = kv2.second;
+                    Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(fId);
+                    if ((t.destinationAddress == nodeIp && t.destinationPort == port) || (t.sourceAddress == nodeIp && t.sourcePort == port))
+                    {
+                        txPacketsAgg += fs.txPackets;
+                        rxPacketsAgg += fs.rxPackets;
+                        lostPacketsAgg += fs.lostPackets;
+                        txBytesAgg += fs.txBytes;
+                        rxBytesAgg += fs.rxBytes;
+                        // delaySum and jitterSum are Time values. We'll sum them.
+                        // Use local accumulators as Time objects
+                        // We will declare them outside the loop.
+                    }
+                }
+                // Calculer perte et moyenne de délai/jitter si possible
+                if (txPacketsAgg > 0)
+                {
+                    lossPct = (double)(txPacketsAgg - rxPacketsAgg) * 100.0 / (double)txPacketsAgg;
+                }
+                if (rxPacketsAgg > 0)
+                {
+                    // Pour delay/jitter, nous allons calculer via toutes les flows correspondantes
+                    // Recalculer en parcourant les flows une seconde fois pour sommer delay/jitter
+                    Time delaySum = Seconds(0.0);
+                    Time jitterSum = Seconds(0.0);
+                    for (auto &kv2 : stats)
+                    {
+                        FlowId fId = kv2.first;
+                        FlowMonitor::FlowStats fs = kv2.second;
+                        Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(fId);
+                        if ((t.destinationAddress == nodeIp && t.destinationPort == port) || (t.sourceAddress == nodeIp && t.sourcePort == port))
+                        {
+                            delaySum += fs.delaySum;
+                            jitterSum += fs.jitterSum;
+                        }
+                    }
+                    meanDelayMs = (delaySum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
+                    meanJitterMs = (jitterSum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
+                }
+            }
 
             // Sauvegarde dans le fichier au format XML
             resultsFile << "  <Result type=\"" << appType 
@@ -448,7 +508,10 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
                         << "\" port=\"" << port 
                         << "\" octetsRecus=\"" << totalReceivedBytes 
                         << "\" debitMbps=\"" << std::fixed << std::setprecision(3) << throughputMbps 
-                        << "\" tauxPertePct=\"N/A\" />" << std::endl;
+                        << "\" tauxPertePct=\"" << std::fixed << std::setprecision(3) << lossPct 
+                        << "\" moyenneDelaiMs=\"" << std::fixed << std::setprecision(3) << meanDelayMs 
+                        << "\" moyenneJitterMs=\"" << std::fixed << std::setprecision(3) << meanJitterMs 
+                        << "\" />" << std::endl;
         }
     }
     
@@ -494,6 +557,71 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
         }
         csvFile.close();
         NS_LOG_INFO("CSV des métriques FlowMonitor sauvegardées dans " << csvOutput);
+        // Ajouter un résumé par application (sink) si demandé
+        std::ofstream csvSummary;
+        std::string summaryName = std::string("summary-") + csvOutput;
+        csvSummary.open(summaryName);
+        csvSummary << "nodeId,port,appType,txPackets,rxPackets,lostPackets,lossPct,txBytes,rxBytes,throughputMbps,meanDelayMs,meanJitterMs" << std::endl;
+        std::map<FlowId, FlowMonitor::FlowStats> stats2 = monitor->GetFlowStats();
+        for (const auto& pairNode : g_installedSinks)
+        {
+            uint32_t nodeId = pairNode.first;
+            Ptr<Node> n = NodeList::GetNode(nodeId);
+            Ipv4Address nodeIp = GetFirstIpv4Address(n);
+            for (const auto& pairPort : pairNode.second)
+            {
+                uint16_t port = pairPort.first;
+                uint64_t txPacketsAgg = 0, rxPacketsAgg = 0, lostPacketsAgg = 0;
+                uint64_t txBytesAgg = 0, rxBytesAgg = 0;
+                Time delaySum = Seconds(0.0);
+                Time jitterSum = Seconds(0.0);
+                for (auto &kv2 : stats2)
+                {
+                    FlowMonitor::FlowStats fs = kv2.second;
+                    Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(kv2.first);
+                    if ((t.destinationAddress == nodeIp && t.destinationPort == port) || (t.sourceAddress == nodeIp && t.sourcePort == port))
+                    {
+                        txPacketsAgg += fs.txPackets;
+                        rxPacketsAgg += fs.rxPackets;
+                        lostPacketsAgg += fs.lostPackets;
+                        txBytesAgg += fs.txBytes;
+                        rxBytesAgg += fs.rxBytes;
+                        delaySum += fs.delaySum;
+                        jitterSum += fs.jitterSum;
+                    }
+                }
+                double lossPct = 0.0;
+                if (txPacketsAgg > 0) lossPct = (double)(txPacketsAgg - rxPacketsAgg) * 100.0 / (double)txPacketsAgg;
+                double meanDelayMs = 0.0, meanJitterMs = 0.0, throughputMbps = 0.0;
+                if (rxPacketsAgg > 0) {
+                    meanDelayMs = (delaySum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
+                    meanJitterMs = (jitterSum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
+                }
+                if (DUREE_SIMULATION > 0)
+                {
+                    throughputMbps = (rxBytesAgg * 8.0) / (DUREE_SIMULATION * 1000000.0);
+                }
+                // Déduire le type d'application (même mapping que plus haut)
+                std::string appType = "Inconnu";
+                switch (port)
+                {
+                    case 9001: appType = "Caméra"; break;
+                    case 9002: appType = "Capteur"; break;
+                    case 9003: appType = "AssistantVocal"; break;
+                    case 9004: appType = "Téléchargement"; break;
+                    case 9005: appType = "VoIP_LiaisonMontante"; break;
+                    case 9006: appType = "VoIP_LiaisonDescendante"; break;
+                    case 9007: appType = "Domotique"; break;
+                    case 9008: appType = "Diffusion"; break;
+                    case 9009: appType = "Sonnette"; break;
+                    case 9010: appType = "MiseAJourFirmware"; break;
+                    case 9011: appType = "Supervision"; break;
+                }
+                csvSummary << nodeId << "," << port << "," << appType << "," << txPacketsAgg << "," << rxPacketsAgg << "," << lostPacketsAgg << "," << lossPct << "," << txBytesAgg << "," << rxBytesAgg << "," << throughputMbps << "," << meanDelayMs << "," << meanJitterMs << std::endl;
+            }
+        }
+        csvSummary.close();
+        NS_LOG_INFO("Résumé CSV par application sauvegardé dans " << summaryName);
     }
     NS_LOG_INFO("Métriques sauvegardées dans simulation-domestique-metrics.xml");
 }
