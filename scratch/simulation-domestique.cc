@@ -500,7 +500,7 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, bool enableCsv = false, cons
 }
 
 
-void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flowOutput, bool enablePcap)
+void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flowOutput, bool enablePcap, bool enableCsv, const std::string &csvOutput)
 {
     // --- 1. Création des Nœuds ---
     NodeContainer clientNodes;
@@ -742,21 +742,25 @@ int main (int argc, char *argv[])
     bool forceAc = true;
     bool enableFlowMonitor = false;
     std::string flowOutput = "traces_de_simulation.xml";
-    // Option to control the simulation duration and PCAP capture
+    // Option to control the simulation duration, PCAP capture et CSV
     bool enablePcap = false; // disabled by default to avoid large files
     double duration = DUREE_SIMULATION;
+    bool enableCsv = false;
+    std::string csvOutput = "simulation-domestique-metrics.csv";
 
     CommandLine cmd;
     cmd.AddValue("forceAc", "Force Wi-Fi standard to 802.11ac", forceAc);
     cmd.AddValue("enableFlowMonitor", "Enable FlowMonitor and write XML", enableFlowMonitor);
     cmd.AddValue("flowOutput", "FlowMonitor output filename", flowOutput);
+    cmd.AddValue("enableCsv", "Enable CSV export of FlowMonitor metrics", enableCsv);
+    cmd.AddValue("csvOutput", "CSV output filename if enableCsv=true", csvOutput);
     cmd.AddValue("duration", "Simulation duration in seconds", duration);
     cmd.AddValue("enablePcap", "Enable PCAP capture (can generate large files)", enablePcap);
     cmd.Parse(argc, argv);
 
     // Appliquer les options spécifiées en CLI
     DUREE_SIMULATION = duration;
-    RunSimulation(forceAc, enableFlowMonitor, flowOutput, enablePcap);
+    RunSimulation(forceAc, enableFlowMonitor, flowOutput, enablePcap, enableCsv, csvOutput);
 
     Simulator::Destroy ();
     return 0;
