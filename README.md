@@ -1,3 +1,26 @@
+# Simulation_de_trace_d-un_reseau_domestique
+
+Ce dépôt contient le travail de simulation réseau réalisé avec ns-3 pour un projet pédagogique. Il présente une simulation d'un réseau domestique (clients Wi‑Fi, point d'accès, trafic généré), les scripts et utilitaires utilisés pour lancer et analyser les traces.
+
+Auteur: Henri Bikouri <henri.bikouri@enspy.cm>
+
+Résumé rapide:
+- **But**: simuler le comportement d'un réseau domestique et produire des traces (`.pcap`) et métriques.
+- **Fichiers importants**: `scratch/simulation-domestique.cc` (code principal), `utils.py`, `test.py`, `traces-*.pcap` (traces générées localement, ignorées du dépôt), `.gitignore`.
+- **Exécution**: Après avoir configuré et compilé ns-3, lancer la simulation depuis la racine du dépôt ns-3 (exemple):
+
+```bash
+./ns3 configure --enable-examples --enable-tests
+./ns3 build
+./ns3 run scratch/simulation-domestique
+```
+
+Notes pour l'enseignant:
+- Les fichiers de trace `.pcap` sont volumineux et ne sont pas inclus dans le dépôt. Je peux fournir un paquet séparé sur demande ou indiquer comment régénérer les traces localement en lançant la simulation.
+- Le code source principal est dans `scratch/simulation-domestique.cc`. Les utilitaires et tests sont dans le dossier `utils/`.
+
+---
+
 # The Network Simulator, Version 3
 
 [![codecov](https://codecov.io/gh/nsnam/ns-3-dev-git/branch/master/graph/badge.svg)](https://codecov.io/gh/nsnam/ns-3-dev-git/branch/master/)
