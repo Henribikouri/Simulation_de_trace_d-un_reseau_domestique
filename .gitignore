@@ -1,0 +1,5 @@
+build/ cmake-cache/ src//model/.o src//test/.o scratch/.o scratch/ns3-dev-
+*.pcap *.tr traces_de_simulation.xml # Le FlowMonitor que j'ai gernerer est tres volumineux , il me faut l'ignorer pour le depot
+.waf-1.8.18-5a71383850dd02a7c4f1c1f93f637f55 .lock-waf-1.8.18-5a71383850dd02a7c4f1c1f93f637f55 .waf-locks .cache/ .vscode/
+ns-3.log ```
+
