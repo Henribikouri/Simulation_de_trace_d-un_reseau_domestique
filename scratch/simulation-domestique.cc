@@ -714,7 +714,7 @@ int main (int argc, char *argv[])
 
     // Apply CLI overrides
     DUREE_SIMULATION = duration;
-    RunSimulation(forceAc, enableFlowMonitor, flowOutput);
+    RunSimulation(forceAc, enableFlowMonitor, flowOutput, enablePcap);
 
     Simulator::Destroy ();
     return 0;
