@@ -38,8 +38,8 @@ const uint32_t N_EQUIPMENTS = 32;
 const uint32_t K_TYPES = 10; 
 
 // Durée de la simulation (en secondes)
-// Note: Pour les tests rapides locaux nous définissons une durée réduite. Remettez à 600.0 pour l'exécution complète.
-const double DUREE_SIMULATION = 30.0; // 30 secondes (test rapide)
+// Par défaut cette constante vaut 600 secondes. Elle peut être modifiée par la ligne de commande (--duration)
+double DUREE_SIMULATION = 600.0; // 10 minutes par défaut
 
 // structure globale permet de suivre les récepteurs installés sur un nœud/port spécifique afin de ne pas avoir à le faire.
 static std::map<uint32_t, std::map<uint16_t, Ptr<PacketSink>>> g_installedSinks;
@@ -653,8 +653,11 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     }
 
     // --- 8. Collecte de Traces PCAP ---
-    // Pour tests rapides, on désactive la capture Pcap afin d'éviter de générer de gros fichiers
-    // phyHelper.EnablePcapAll("traces-simulation-domestique", true);
+    if (enablePcap)
+    {
+        NS_LOG_INFO("Enabling PCAP capture: traces-simulation-domestique*");
+        phyHelper.EnablePcapAll("traces-simulation-domestique", true);
+    }
 
     // --- 8. Lancement de la Simulation ---
     Simulator::Stop (Seconds(DUREE_SIMULATION));
@@ -697,13 +700,20 @@ int main (int argc, char *argv[])
     bool forceAc = true;
     bool enableFlowMonitor = false;
     std::string flowOutput = "traces_de_simulation.xml";
+    // Option to control the simulation duration and PCAP capture
+    bool enablePcap = false; // disabled by default to avoid large files
+    double duration = DUREE_SIMULATION;
 
     CommandLine cmd;
     cmd.AddValue("forceAc", "Force Wi-Fi standard to 802.11ac", forceAc);
     cmd.AddValue("enableFlowMonitor", "Enable FlowMonitor and write XML", enableFlowMonitor);
     cmd.AddValue("flowOutput", "FlowMonitor output filename", flowOutput);
+    cmd.AddValue("duration", "Simulation duration in seconds", duration);
+    cmd.AddValue("enablePcap", "Enable PCAP capture (can generate large files)", enablePcap);
     cmd.Parse(argc, argv);
 
+    // Apply CLI overrides
+    DUREE_SIMULATION = duration;
     RunSimulation(forceAc, enableFlowMonitor, flowOutput);
 
     Simulator::Destroy ();
