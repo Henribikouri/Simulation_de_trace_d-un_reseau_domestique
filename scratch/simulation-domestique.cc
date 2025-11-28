@@ -386,7 +386,7 @@ void ConfigureMonitoring(Ptr<Node> clientNode, Ptr<Node> serverNode, double star
  * 1. Le débit : Octets reçus * 8 / (Durée de simulation * 10^6) -> Mbits/s
  * 2. Le taux de perte de paquets (Loss Rate) : Non calculé actuellement (N/A)
  */
-void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, bool enableCsv = false, const std::string &csvOutput = "simulation-domestique-metrics.csv")
+void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> classifier = 0, bool enableCsv = false, const std::string &csvOutput = "simulation-domestique-metrics.csv")
 {
     // Ouvrir un fichier pour sauvegarder les résultats (XML)
     std::ofstream resultsFile;
@@ -455,11 +455,10 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, bool enableCsv = false, cons
     resultsFile << "</SimulationMetrics>" << std::endl;
     resultsFile.close();
     // Si demandé, ouvrir et écrire un CSV avec des métriques détaillées de flux via FlowMonitor
-    if (enableCsv && monitor)
+    if (enableCsv && monitor && classifier)
     {
         // Préparer le classifier et récupérer les statistiques
-        FlowMonitorHelper flowmonHelper; // classifier disponible via flowmonHelper
-        Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowmonHelper.GetClassifier());
+        // 'classifier' doit provenir de FlowMonitorHelper créé par RunSimulation
         std::ofstream csvFile;
         csvFile.open(csvOutput);
         csvFile << "flowId,srcAddr,srcPort,dstAddr,dstPort,txPackets,rxPackets,lostPackets,lossPct,txBytes,rxBytes,throughputMbps,meanDelayMs,meanJitterMs" << std::endl;
@@ -692,6 +691,8 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     {
         NS_LOG_INFO("Installation du FlowMonitor sur tous les nœuds");
         monitor = flowmon.InstallAll();
+        // Récupérer le classifieur qui a été utilisé pour identifier les flux
+        Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
     }
 
     // --- 8. Collecte de Traces PCAP ---
@@ -721,7 +722,12 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     }
 
     // --- 9. Post-traitement et Extraction de Métriques ---
-        CalculateMetrics(monitor, enableCsv, csvOutput);
+        // Appeler le calcul des métriques en transmettant le monitor et le classifier si disponibles
+        Ptr<Ipv4FlowClassifier> classifierPtr = 0;
+        if (enableFlowMonitor) {
+            classifierPtr = DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
+        }
+        CalculateMetrics(monitor, classifierPtr, enableCsv, csvOutput);
 }
 
 
