@@ -386,9 +386,9 @@ void ConfigureMonitoring(Ptr<Node> clientNode, Ptr<Node> serverNode, double star
  * 1. Le débit : Octets reçus * 8 / (Durée de simulation * 10^6) -> Mbits/s
  * 2. Le taux de perte de paquets (Loss Rate) : Non calculé actuellement (N/A)
  */
-void CalculateMetrics()
+void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, bool enableCsv = false, const std::string &csvOutput = "simulation-domestique-metrics.csv")
 {
-    // Ouvrir un fichier pour sauvegarder les résultats
+    // Ouvrir un fichier pour sauvegarder les résultats (XML)
     std::ofstream resultsFile;
     // Changement du format de sortie vers XML
     resultsFile.open("simulation-domestique-metrics.xml");
@@ -454,6 +454,48 @@ void CalculateMetrics()
     
     resultsFile << "</SimulationMetrics>" << std::endl;
     resultsFile.close();
+    // Si demandé, ouvrir et écrire un CSV avec des métriques détaillées de flux via FlowMonitor
+    if (enableCsv && monitor)
+    {
+        // Préparer le classifier et récupérer les statistiques
+        FlowMonitorHelper flowmonHelper; // classifier disponible via flowmonHelper
+        Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowmonHelper.GetClassifier());
+        std::ofstream csvFile;
+        csvFile.open(csvOutput);
+        csvFile << "flowId,srcAddr,srcPort,dstAddr,dstPort,txPackets,rxPackets,lostPackets,lossPct,txBytes,rxBytes,throughputMbps,meanDelayMs,meanJitterMs" << std::endl;
+        std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
+        for (auto &kv : stats)
+        {
+            FlowId flowId = kv.first;
+            FlowMonitor::FlowStats fs = kv.second;
+            Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(flowId);
+            double lossPct = 0.0;
+            if (fs.txPackets > 0)
+            {
+                lossPct = (double)(fs.txPackets - fs.rxPackets) * 100.0 / (double)fs.txPackets;
+            }
+            double durationSeconds = (fs.timeLastTxPacket.GetSeconds() - fs.timeFirstTxPacket.GetSeconds());
+            double throughputMbps = 0.0;
+            if (durationSeconds > 0.0)
+            {
+                throughputMbps = (fs.rxBytes * 8.0) / (durationSeconds * 1000000.0);
+            }
+            double meanDelayMs = 0.0;
+            if (fs.rxPackets > 0)
+            {
+                meanDelayMs = (fs.delaySum.GetSeconds() / (double)fs.rxPackets) * 1000.0;
+            }
+            double meanJitterMs = 0.0;
+            if (fs.rxPackets > 0)
+            {
+                meanJitterMs = (fs.jitterSum.GetSeconds() / (double)fs.rxPackets) * 1000.0;
+            }
+            csvFile << flowId << "," << t.sourceAddress << "," << t.sourcePort << "," << t.destinationAddress << "," << t.destinationPort << ","
+                    << fs.txPackets << "," << fs.rxPackets << "," << fs.lostPackets << "," << lossPct << "," << fs.txBytes << "," << fs.rxBytes << "," << std::fixed << std::setprecision(6) << throughputMbps << "," << meanDelayMs << "," << meanJitterMs << std::endl;
+        }
+        csvFile.close();
+        NS_LOG_INFO("CSV des métriques FlowMonitor sauvegardées dans " << csvOutput);
+    }
     NS_LOG_INFO("Métriques sauvegardées dans simulation-domestique-metrics.xml");
 }
 
@@ -679,7 +721,7 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     }
 
     // --- 9. Post-traitement et Extraction de Métriques ---
-    CalculateMetrics();
+        CalculateMetrics(monitor, enableCsv, csvOutput);
 }
 
 
