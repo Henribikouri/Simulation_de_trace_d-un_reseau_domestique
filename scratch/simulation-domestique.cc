@@ -458,7 +458,7 @@ void CalculateMetrics()
 }
 
 
-void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flowOutput)
+void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flowOutput, bool enablePcap)
 {
     // --- 1. Création des Nœuds ---
     NodeContainer clientNodes;
