@@ -2,7 +2,7 @@
 
 Ce dépôt contient le travail de simulation réseau réalisé avec ns-3 pour un projet pédagogique. Il présente une simulation d'un réseau domestique (clients Wi‑Fi, point d'accès, trafic généré), les scripts et utilitaires utilisés pour lancer et analyser les traces.
 
-Auteur: Henri Bikouri <henri.bikouri@enspy.cm>
+Auteur: Henri Bikouri <henri.bikouri@enspy-uy1.cm>
 
 Résumé rapide:
 - **But**: simuler le comportement d'un réseau domestique et produire des traces (`.pcap`) et métriques.
