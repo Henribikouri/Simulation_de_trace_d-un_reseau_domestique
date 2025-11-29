@@ -1,7 +1,7 @@
 // *************** CODE SOURCE DE BIKOURI HENRI **********************
 
 //************* Mon site web : henribikouri.github.io *************************
-//*********************Email : henri.bikouri@enspy.cm ****************************
+//*********************Email : henri.bikouri@enspy-uy1.cm ****************************
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h" 
 #include "ns3/applications-module.h"
@@ -57,7 +57,7 @@ Ipv4Address GetFirstIpv4Address(Ptr<Node> node)
         for (uint32_t j = 0; j < ipv4->GetNAddresses(i); ++j)
         {
             Ipv4Address addr = ipv4->GetAddress(i, j).GetLocal();
-                    // Vérifier qu'il ne s'agit pas d'une adresse nulle ni d'une adresse loopback
+                    
             if ((addr != Ipv4Address("0.0.0.0")) && (addr != Ipv4Address("127.0.0.1")))
             {
                 return addr;
@@ -398,9 +398,7 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
     resultsFile << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl;
     resultsFile << "<SimulationMetrics duration_seconds=\"" << DUREE_SIMULATION << "\">" << std::endl;
     
-    // NOTE: Le code pour le calcul des paquets envoyés (Étape 1) est omis ici car
-    // il nécessite des attributs de traçage plus complexes pour les applications
-    // OnOff et BulkSend, et nous nous concentrons sur le débit reçu.
+    
 
     // Étape 2 : Collecter les métriques de réception pour tous les sinks
     for (const auto& pairNode : g_installedSinks)
@@ -437,15 +435,6 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
                 case 9011: appType = "Supervision"; break;
             }
             
-            // Affichage dans la console
-            std::cout << appType << " (Nœud " << nodeId << ", Port " << port << ") | Reçu: " 
-                      << totalReceivedBytes << " Octets | Débit: " 
-                      << std::fixed << std::setprecision(3) << throughputMbps << " Mbps";
-            if (monitor && classifier) {
-                std::cout << " | Perte: " << std::fixed << std::setprecision(3) << lossPct << "% | Délai moyen: " << meanDelayMs << " ms | Jitter moyen: " << meanJitterMs << " ms";
-            }
-            std::cout << std::endl;
-
             // Recueillir métriques additionnelles si FlowMonitor/Classifier disponibles
             double lossPct = 0.0;
             double meanDelayMs = 0.0;
@@ -470,9 +459,6 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
                         lostPacketsAgg += fs.lostPackets;
                         txBytesAgg += fs.txBytes;
                         rxBytesAgg += fs.rxBytes;
-                        // delaySum and jitterSum are Time values. We'll sum them.
-                        // Use local accumulators as Time objects
-                        // We will declare them outside the loop.
                     }
                 }
                 // Calculer perte et moyenne de délai/jitter si possible
@@ -483,14 +469,12 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
                 if (rxPacketsAgg > 0)
                 {
                     // Pour delay/jitter, nous allons calculer via toutes les flows correspondantes
-                    // Recalculer en parcourant les flows une seconde fois pour sommer delay/jitter
                     Time delaySum = Seconds(0.0);
                     Time jitterSum = Seconds(0.0);
                     for (auto &kv2 : stats)
                     {
-                        FlowId fId = kv2.first;
                         FlowMonitor::FlowStats fs = kv2.second;
-                        Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(fId);
+                        Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(kv2.first);
                         if ((t.destinationAddress == nodeIp && t.destinationPort == port) || (t.sourceAddress == nodeIp && t.sourcePort == port))
                         {
                             delaySum += fs.delaySum;
@@ -501,6 +485,15 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
                     meanJitterMs = (jitterSum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
                 }
             }
+
+            // Affichage dans la console
+            std::cout << appType << " (Nœud " << nodeId << ", Port " << port << ") | Reçu: " 
+                      << totalReceivedBytes << " Octets | Débit: " 
+                      << std::fixed << std::setprecision(3) << throughputMbps << " Mbps";
+            if (monitor && classifier) {
+                std::cout << " | Perte: " << std::fixed << std::setprecision(3) << lossPct << "% | Délai moyen: " << meanDelayMs << " ms | Jitter moyen: " << meanJitterMs << " ms";
+            }
+            std::cout << std::endl;
 
             // Sauvegarde dans le fichier au format XML
             resultsFile << "  <Result type=\"" << appType 
@@ -670,21 +663,10 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
         NS_LOG_INFO("Utilisation du standard Wi‑Fi par défaut (sans contrainte). ");
     }
 
-    // Piste d'amélioration : gestionnaire de taux réaliste
-    // Utiliser Minstrel HT manager pour les modes haut débit (supporte HT/VHT)
+    
+    // Utilisation de Minstrel HT manager pour les modes haut débit (supporte HT/VHT)
     wifiHelper.SetRemoteStationManager("ns3::MinstrelHtWifiManager");
 
-    // Tentative de sélection de la norme 802.11ac (la directive a fonctionné dans la sortie précédente)
-    // Nous gardons la directive pour la portabilité
-    // #if defined(WIFI_STANDARD_80211ac)
-    //     wifiHelper.SetStandard(WIFI_STANDARD_80211ac);
-    //     NS_LOG_INFO("Standard Wi‑Fi sélectionné via enum: 802.11ac");
-    // #elif defined(WIFI_PHY_STANDARD_80211ac)
-    //     wifiHelper.SetStandard(WIFI_PHY_STANDARD_80211ac);
-    //     NS_LOG_INFO("Standard Wi‑Fi sélectionné via macro: 802.11ac");
-    // #else
-    //     NS_LOG_WARN("Aucun standard 802.11ac reconnu; retour au standard par défaut.");
-    // #endif
     
     WifiMacHelper macHelper;
     Ssid ssid = Ssid("MaisonConnectee");
