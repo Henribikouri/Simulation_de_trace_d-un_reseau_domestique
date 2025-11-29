@@ -809,7 +809,13 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     if (enablePcap)
     {
         NS_LOG_INFO("Activation de la capture PCAP : traces-simulation-domestique*");
-        phyHelper.EnablePcapAll("traces-simulation-domestique", true);
+        // Capturer uniquement sur l'interface AP pour réduire la taille des traces
+        NS_LOG_INFO("Activation PCAP uniquement sur l'interface AP (traces-simulation-domestique-ap)");
+        if (apDevice.GetN() > 0) {
+            phyHelper.EnablePcap("traces-simulation-domestique-ap", apDevice.Get(0));
+        } else {
+            NS_LOG_WARN("Pas d'interface AP trouvée pour la capture PCAP.");
+        }
     }
 
     // --- 8. Lancement de la Simulation ---
