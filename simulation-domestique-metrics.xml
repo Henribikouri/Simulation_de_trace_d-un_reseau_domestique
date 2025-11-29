@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SimulationMetrics duration_seconds="60">
+  <Result type="Téléchargement" nodeId="18" port="9004" octetsRecus="0" debitMbps="0.000" tauxPertePct="100.000" moyenneDelaiMs="0.000" moyenneJitterMs="0.000" />
+  <Result type="Téléchargement" nodeId="19" port="9004" octetsRecus="100000000" debitMbps="13.333" tauxPertePct="0.132" moyenneDelaiMs="5.145" moyenneJitterMs="0.067" />
+  <Result type="VoIP_LiaisonDescendante" nodeId="20" port="9006" octetsRecus="0" debitMbps="0.000" tauxPertePct="100.000" moyenneDelaiMs="0.000" moyenneJitterMs="0.000" />
+  <Result type="VoIP_LiaisonDescendante" nodeId="21" port="9006" octetsRecus="501660" debitMbps="0.067" tauxPertePct="4.358" moyenneDelaiMs="4.442" moyenneJitterMs="1.312" />
+  <Result type="VoIP_LiaisonDescendante" nodeId="22" port="9006" octetsRecus="501660" debitMbps="0.067" tauxPertePct="4.062" moyenneDelaiMs="4.172" moyenneJitterMs="1.174" />
+  <Result type="VoIP_LiaisonDescendante" nodeId="23" port="9006" octetsRecus="510480" debitMbps="0.068" tauxPertePct="2.476" moyenneDelaiMs="3.443" moyenneJitterMs="0.998" />
+  <Result type="Diffusion" nodeId="28" port="9008" octetsRecus="12499200" debitMbps="1.667" tauxPertePct="0.000" moyenneDelaiMs="1.471" moyenneJitterMs="0.216" />
+  <Result type="MiseAJourFirmware" nodeId="30" port="9010" octetsRecus="0" debitMbps="0.000" tauxPertePct="0.000" moyenneDelaiMs="0.000" moyenneJitterMs="0.000" />
+  <Result type="Caméra" nodeId="32" port="9001" octetsRecus="6817200" debitMbps="0.909" tauxPertePct="0.959" moyenneDelaiMs="1.397" moyenneJitterMs="0.323" />
+  <Result type="Capteur" nodeId="33" port="9002" octetsRecus="0" debitMbps="0.000" tauxPertePct="11.765" moyenneDelaiMs="20.508" moyenneJitterMs="6.076" />
+  <Result type="AssistantVocal" nodeId="34" port="9003" octetsRecus="0" debitMbps="0.000" tauxPertePct="0.000" moyenneDelaiMs="11.764" moyenneJitterMs="4.082" />
+  <Result type="VoIP_LiaisonMontante" nodeId="36" port="9005" octetsRecus="2042100" debitMbps="0.272" tauxPertePct="2.793" moyenneDelaiMs="1.328" moyenneJitterMs="0.315" />
+  <Result type="Domotique" nodeId="37" port="9007" octetsRecus="896" debitMbps="0.000" tauxPertePct="6.667" moyenneDelaiMs="3.165" moyenneJitterMs="2.064" />
+  <Result type="Sonnette" nodeId="39" port="9009" octetsRecus="0" debitMbps="0.000" tauxPertePct="0.000" moyenneDelaiMs="5.349" moyenneJitterMs="1.754" />
+  <Result type="Supervision" nodeId="41" port="9011" octetsRecus="8400" debitMbps="0.001" tauxPertePct="6.667" moyenneDelaiMs="1.885" moyenneJitterMs="0.755" />
+</SimulationMetrics>

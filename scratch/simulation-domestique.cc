@@ -1,10 +1,11 @@
 // *************** CODE SOURCE DE BIKOURI HENRI **********************
 
 //************* Mon site web : henribikouri.github.io *************************
-//*********************Email : henri.bikouri@enspy.cm ****************************
+//*********************Email : henri.bikouri@enspy-uy1.cm ****************************
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h" 
 #include "ns3/applications-module.h"
+#include "ns3/node-list.h"
 #include "ns3/wifi-module.h" 
 #include "ns3/mobility-module.h"
 #include "ns3/point-to-point-module.h"
@@ -38,7 +39,8 @@ const uint32_t N_EQUIPMENTS = 32;
 const uint32_t K_TYPES = 10; 
 
 // Durée de la simulation (en secondes)
-const double DUREE_SIMULATION = 600.0; // 10 minutes
+// Par défaut cette constante vaut 600 secondes. Elle peut être modifiée par la ligne de commande (--duration)
+double DUREE_SIMULATION = 600.0; // 10 minutes par défaut
 
 // structure globale permet de suivre les récepteurs installés sur un nœud/port spécifique afin de ne pas avoir à le faire.
 static std::map<uint32_t, std::map<uint16_t, Ptr<PacketSink>>> g_installedSinks;
@@ -55,7 +57,7 @@ Ipv4Address GetFirstIpv4Address(Ptr<Node> node)
         for (uint32_t j = 0; j < ipv4->GetNAddresses(i); ++j)
         {
             Ipv4Address addr = ipv4->GetAddress(i, j).GetLocal();
-            // Check for non-zero and non-loopback address
+                    
             if ((addr != Ipv4Address("0.0.0.0")) && (addr != Ipv4Address("127.0.0.1")))
             {
                 return addr;
@@ -74,7 +76,7 @@ Ptr<PacketSink> InstallSinkIfNeeded(Ptr<Node> node, InetSocketAddress sinkSocket
     if (mapRef.find(port) == mapRef.end())
     {
         PacketSinkHelper sinkHelper(factory, sinkSocket);
-        NS_LOG_INFO ("Installing sink on node " << id << " -> " << sinkSocket.GetIpv4() << ":" << port);
+        NS_LOG_INFO ("Installation d'un récepteur sur le nœud " << id << " -> " << sinkSocket.GetIpv4() << ":" << port);
         ApplicationContainer apps = sinkHelper.Install(node);
         
         // Récupérer le pointeur d'application du récepteur réel
@@ -90,12 +92,12 @@ Ptr<PacketSink> InstallSinkIfNeeded(Ptr<Node> node, InetSocketAddress sinkSocket
     }
     else
     {
-        NS_LOG_INFO ("Sink already installed on node " << id << " port " << port << "; reusing existing sink.");
+        NS_LOG_INFO ("Récepteur déjà installé sur le nœud " << id << " port " << port << "; réutilisation du récepteur existant.");
         return mapRef[port];
     }
 }
 
-// Global structure to track traffic sources (to retrieve Total Sent Packets)
+// Structure globale pour suivre les sources de trafic (permet de récupérer Total Sent Packets)
 struct TrafficSourceInfo {
     std::string type;
     Ptr<Application> app;
@@ -126,7 +128,7 @@ void ConfigureCamera(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTim
     clientApp.Stop(Seconds(DUREE_SIMULATION));
 
     // Enregistrement de la source
-    g_trafficSources.push_back({"Camera", clientApp.Get(0)});
+    g_trafficSources.push_back({"Caméra", clientApp.Get(0)});
 
     Ipv4Address serverIp = GetFirstIpv4Address(serverNode);
     InetSocketAddress sinkSocket(serverIp, 9001);
@@ -152,7 +154,7 @@ void ConfigureSensor(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTim
     clientApp.Stop(Seconds(DUREE_SIMULATION));
 
     // Enregistrement de la source
-    g_trafficSources.push_back({"Sensor", clientApp.Get(0)});
+    g_trafficSources.push_back({"Capteur", clientApp.Get(0)});
 
     Ipv4Address serverIp = GetFirstIpv4Address(serverNode);
     InetSocketAddress sinkSocket(serverIp, 9002);
@@ -163,7 +165,7 @@ void ConfigureSensor(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTim
 // 3. Assistant Vocal (TCP Rafale Courte, Port 9003)
 void ConfigureVoiceAssistant(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 {
-    Ipv4Address remoteIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address remoteIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress remoteSocket(remoteIp, 9003);
     OnOffHelper clientHelper("ns3::TcpSocketFactory", remoteSocket);
 
@@ -178,9 +180,9 @@ void ConfigureVoiceAssistant(Ptr<Node> clientNode, Ptr<Node> serverNode, double 
     clientApp.Stop(Seconds(DUREE_SIMULATION));
     
     // Enregistrement de la source
-    g_trafficSources.push_back({"VoiceAssistant", clientApp.Get(0)});
+    g_trafficSources.push_back({"AssistantVocal", clientApp.Get(0)});
 
-    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress sinkSocket(serverIp, 9003);
     InstallSinkIfNeeded(serverNode, sinkSocket, "ns3::TcpSocketFactory");
 }
@@ -189,7 +191,7 @@ void ConfigureVoiceAssistant(Ptr<Node> clientNode, Ptr<Node> serverNode, double 
 // 4. Téléchargement de Fichier (TCP Débit Maximal, Port 9004)
 void ConfigureDownload(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 {
-    Ipv4Address clientIp = GetFirstIpv4Address(clientNode); // Using helper
+    Ipv4Address clientIp = GetFirstIpv4Address(clientNode); // Utilise le helper
     InetSocketAddress remoteSocket(clientIp, 9004);
     BulkSendHelper serverHelper("ns3::TcpSocketFactory", remoteSocket);
     
@@ -200,9 +202,9 @@ void ConfigureDownload(Ptr<Node> clientNode, Ptr<Node> serverNode, double startT
     serverApp.Stop(Seconds(DUREE_SIMULATION));
 
     // Enregistrement de la source (le serveur dans ce cas)
-    g_trafficSources.push_back({"Download-Server", serverApp.Get(0)});
+    g_trafficSources.push_back({"Téléchargement-Serveur", serverApp.Get(0)});
 
-    Ipv4Address sinkIp = GetFirstIpv4Address(clientNode); // Using helper
+    Ipv4Address sinkIp = GetFirstIpv4Address(clientNode); // Utilise le helper
     InetSocketAddress sinkSocket(sinkIp, 9004);
     InstallSinkIfNeeded(clientNode, sinkSocket, "ns3::TcpSocketFactory");
 }
@@ -212,7 +214,7 @@ void ConfigureDownload(Ptr<Node> clientNode, Ptr<Node> serverNode, double startT
 void ConfigureVoIP(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 {
     // Sens 1 : Client -> Serveur (Upload, Port 9005)
-    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress upSocket(serverIp, 9005);
     OnOffHelper upHelper("ns3::UdpSocketFactory", upSocket);
     upHelper.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1.0]")); 
@@ -223,10 +225,10 @@ void ConfigureVoIP(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
     ApplicationContainer upApp = upHelper.Install(clientNode);
     upApp.Start(Seconds(startTime));
     upApp.Stop(Seconds(DUREE_SIMULATION));
-    g_trafficSources.push_back({"VoIP-Client-Uplink", upApp.Get(0)});
+    g_trafficSources.push_back({"VoIP_Montante_Client", upApp.Get(0)});
 
     // Sens 2 : Serveur -> Client (Download, Port 9006)
-    Ipv4Address clientIp = GetFirstIpv4Address(clientNode); // Using helper
+    Ipv4Address clientIp = GetFirstIpv4Address(clientNode); // Utilise le helper
     InetSocketAddress downSocket(clientIp, 9006);
     OnOffHelper downHelper("ns3::UdpSocketFactory", downSocket);
     downHelper.SetAttribute("OnTime", StringValue("ns3::ConstantRandomVariable[Constant=1.0]")); 
@@ -237,7 +239,7 @@ void ConfigureVoIP(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
     ApplicationContainer downApp = downHelper.Install(serverNode);
     downApp.Start(Seconds(startTime));
     downApp.Stop(Seconds(DUREE_SIMULATION));
-    g_trafficSources.push_back({"VoIP-Server-Downlink", downApp.Get(0)});
+    g_trafficSources.push_back({"VoIP_Descendante_Server", downApp.Get(0)});
     
     // Les Sinks sont installés pour recevoir des deux côtés
     InetSocketAddress sinkSocket1(serverIp, 9005);
@@ -251,7 +253,7 @@ void ConfigureVoIP(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 // 6. Domotique (UDP Aléatoire, Petit Paquet, Port 9007)
 void ConfigureDomotics(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 {
-    Ipv4Address remoteIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address remoteIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress remoteSocket(remoteIp, 9007);
     UdpClientHelper clientHelper(remoteSocket);
     
@@ -268,9 +270,9 @@ void ConfigureDomotics(Ptr<Node> clientNode, Ptr<Node> serverNode, double startT
     clientApp.Stop(Seconds(DUREE_SIMULATION));
     
     // Enregistrement de la source
-    g_trafficSources.push_back({"Domotics", clientApp.Get(0)});
+    g_trafficSources.push_back({"Domotique", clientApp.Get(0)});
 
-    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress sinkSocket(serverIp, 9007);
     InstallSinkIfNeeded(serverNode, sinkSocket, "ns3::UdpSocketFactory");
 }
@@ -279,7 +281,7 @@ void ConfigureDomotics(Ptr<Node> clientNode, Ptr<Node> serverNode, double startT
 // 7. Streaming Musical (TCP Rafale Intermittente, Port 9008)
 void ConfigureStreaming(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 {
-    Ipv4Address clientIp = GetFirstIpv4Address(clientNode); // Using helper
+    Ipv4Address clientIp = GetFirstIpv4Address(clientNode); // Utilise le helper
     InetSocketAddress remoteSocket(clientIp, 9008);
     OnOffHelper serverHelper("ns3::TcpSocketFactory", remoteSocket);
 
@@ -294,9 +296,9 @@ void ConfigureStreaming(Ptr<Node> clientNode, Ptr<Node> serverNode, double start
     serverApp.Stop(Seconds(DUREE_SIMULATION));
 
     // Enregistrement de la source
-    g_trafficSources.push_back({"Streaming-Server", serverApp.Get(0)});
+    g_trafficSources.push_back({"Diffusion-Serveur", serverApp.Get(0)});
 
-    Ipv4Address sinkIp = GetFirstIpv4Address(clientNode); // Using helper
+    Ipv4Address sinkIp = GetFirstIpv4Address(clientNode); // Utilise le helper
     InetSocketAddress sinkSocket(sinkIp, 9008);
     InstallSinkIfNeeded(clientNode, sinkSocket, "ns3::TcpSocketFactory");
 }
@@ -305,7 +307,7 @@ void ConfigureStreaming(Ptr<Node> clientNode, Ptr<Node> serverNode, double start
 // 8. Sonnette Connectée (TCP, Très Sporadique, Port 9009)
 void ConfigureDoorbell(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 {
-    Ipv4Address remoteIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address remoteIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress remoteSocket(remoteIp, 9009);
     OnOffHelper clientHelper("ns3::TcpSocketFactory", remoteSocket);
 
@@ -324,9 +326,9 @@ void ConfigureDoorbell(Ptr<Node> clientNode, Ptr<Node> serverNode, double startT
     clientApp.Stop(Seconds(DUREE_SIMULATION));
     
     // Enregistrement de la source
-    g_trafficSources.push_back({"Doorbell", clientApp.Get(0)});
+    g_trafficSources.push_back({"Sonnette", clientApp.Get(0)});
 
-    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress sinkSocket(serverIp, 9009);
     InstallSinkIfNeeded(serverNode, sinkSocket, "ns3::TcpSocketFactory");
 }
@@ -335,7 +337,7 @@ void ConfigureDoorbell(Ptr<Node> clientNode, Ptr<Node> serverNode, double startT
 // 9. Mise à Jour Firmware (TCP, Événement Lourd, Port 9010)
 void ConfigureFirmwareUpdate(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 {
-    Ipv4Address clientIp = GetFirstIpv4Address(clientNode); // Using helper
+    Ipv4Address clientIp = GetFirstIpv4Address(clientNode); // Utilise le helper
     InetSocketAddress remoteSocket(clientIp, 9010);
     BulkSendHelper serverHelper("ns3::TcpSocketFactory", remoteSocket);
     
@@ -348,9 +350,9 @@ void ConfigureFirmwareUpdate(Ptr<Node> clientNode, Ptr<Node> serverNode, double 
     serverApp.Stop(Seconds(DUREE_SIMULATION));
 
     // Enregistrement de la source
-    g_trafficSources.push_back({"FirmwareUpdate-Server", serverApp.Get(0)});
+    g_trafficSources.push_back({"MiseAJourFirmware-Serveur", serverApp.Get(0)});
 
-    Ipv4Address sinkIp = GetFirstIpv4Address(clientNode); // Using helper
+    Ipv4Address sinkIp = GetFirstIpv4Address(clientNode); // Utilise le helper
     InetSocketAddress sinkSocket(sinkIp, 9010);
     InstallSinkIfNeeded(clientNode, sinkSocket, "ns3::TcpSocketFactory");
 }
@@ -359,7 +361,7 @@ void ConfigureFirmwareUpdate(Ptr<Node> clientNode, Ptr<Node> serverNode, double 
 // 10. Monitoring Réseau (UDP, Régulier Léger, Port 9011)
 void ConfigureMonitoring(Ptr<Node> clientNode, Ptr<Node> serverNode, double startTime)
 {
-    Ipv4Address remoteIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address remoteIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress remoteSocket(remoteIp, 9011);
     UdpClientHelper clientHelper(remoteSocket);
 
@@ -372,9 +374,9 @@ void ConfigureMonitoring(Ptr<Node> clientNode, Ptr<Node> serverNode, double star
     clientApp.Stop(Seconds(DUREE_SIMULATION));
 
     // Enregistrement de la source
-    g_trafficSources.push_back({"Monitoring", clientApp.Get(0)});
+    g_trafficSources.push_back({"Supervision", clientApp.Get(0)});
 
-    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Using helper
+    Ipv4Address serverIp = GetFirstIpv4Address(serverNode); // Utilise le helper
     InetSocketAddress sinkSocket(serverIp, 9011);
     InstallSinkIfNeeded(serverNode, sinkSocket, "ns3::UdpSocketFactory");
 }
@@ -382,12 +384,12 @@ void ConfigureMonitoring(Ptr<Node> clientNode, Ptr<Node> serverNode, double star
 /**
  * @brief Calcule et affiche les métriques de performance pour chaque application.
  * * Cette fonction itère sur tous les sinks installés (récepteurs) et calcule :
- * 1. Le débit (Throughput) : Octets Reçus * 8 / (Durée de Simulation * 10^6)
+ * 1. Le débit : Octets reçus * 8 / (Durée de simulation * 10^6) -> Mbits/s
  * 2. Le taux de perte de paquets (Loss Rate) : Non calculé actuellement (N/A)
  */
-void CalculateMetrics()
+void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> classifier = 0, bool enableCsv = false, const std::string &csvOutput = "simulation-domestique-metrics.csv")
 {
-    // Ouvrir un fichier pour sauvegarder les résultats
+    // Ouvrir un fichier pour sauvegarder les résultats (XML)
     std::ofstream resultsFile;
     // Changement du format de sortie vers XML
     resultsFile.open("simulation-domestique-metrics.xml");
@@ -396,9 +398,7 @@ void CalculateMetrics()
     resultsFile << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl;
     resultsFile << "<SimulationMetrics duration_seconds=\"" << DUREE_SIMULATION << "\">" << std::endl;
     
-    // NOTE: Le code pour le calcul des paquets envoyés (Étape 1) est omis ici car
-    // il nécessite des attributs de traçage plus complexes pour les applications
-    // OnOff et BulkSend, et nous nous concentrons sur le débit reçu.
+    
 
     // Étape 2 : Collecter les métriques de réception pour tous les sinks
     for (const auto& pairNode : g_installedSinks)
@@ -414,50 +414,213 @@ void CalculateMetrics()
             // Données de réception du sink
             uint64_t totalReceivedBytes = sink->GetTotalRx();
             
-            // Débit (Bytes/s -> Mbits/s)
-            // Débit = (Octets Reçus * 8) / (Durée de Simulation * 10^6)
+            // Débit (Octets/s -> Mbits/s)
+            // Débit = (Octets reçus * 8) / (Durée de simulation * 10^6)
             double throughputMbps = (totalReceivedBytes * 8.0) / (DUREE_SIMULATION * 1000000.0);
             
             // Trouver le type d'application basé sur le port (approximatif)
-            std::string appType = "Unknown";
+            std::string appType = "Inconnu";
             switch (port)
             {
-                case 9001: appType = "Camera"; break;
-                case 9002: appType = "Sensor"; break;
-                case 9003: appType = "VoiceAssistant"; break;
-                case 9004: appType = "Download"; break;
-                case 9005: appType = "VoIP_Uplink"; break;
-                case 9006: appType = "VoIP_Downlink"; break;
-                case 9007: appType = "Domotics"; break;
-                case 9008: appType = "Streaming"; break;
-                case 9009: appType = "Doorbell"; break;
-                case 9010: appType = "FirmwareUpdate"; break;
-                case 9011: appType = "Monitoring"; break;
+                case 9001: appType = "Caméra"; break;
+                case 9002: appType = "Capteur"; break;
+                case 9003: appType = "AssistantVocal"; break;
+                case 9004: appType = "Téléchargement"; break;
+                case 9005: appType = "VoIP_LiaisonMontante"; break;
+                case 9006: appType = "VoIP_LiaisonDescendante"; break;
+                case 9007: appType = "Domotique"; break;
+                case 9008: appType = "Diffusion"; break;
+                case 9009: appType = "Sonnette"; break;
+                case 9010: appType = "MiseAJourFirmware"; break;
+                case 9011: appType = "Supervision"; break;
             }
             
+            // Recueillir métriques additionnelles si FlowMonitor/Classifier disponibles
+            double lossPct = 0.0;
+            double meanDelayMs = 0.0;
+            double meanJitterMs = 0.0;
+            uint64_t txPacketsAgg = 0, rxPacketsAgg = 0, lostPacketsAgg = 0;
+            uint64_t txBytesAgg = 0, rxBytesAgg = 0;
+            if (monitor && classifier)
+            {
+                // Aggréger les statistiques de flow correspondant à ce sink (destination = node IP & port)
+                Ptr<Node> n = NodeList::GetNode(nodeId);
+                Ipv4Address nodeIp = GetFirstIpv4Address(n);
+                std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
+                for (auto &kv2 : stats)
+                {
+                    FlowId fId = kv2.first;
+                    FlowMonitor::FlowStats fs = kv2.second;
+                    Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(fId);
+                    if ((t.destinationAddress == nodeIp && t.destinationPort == port) || (t.sourceAddress == nodeIp && t.sourcePort == port))
+                    {
+                        txPacketsAgg += fs.txPackets;
+                        rxPacketsAgg += fs.rxPackets;
+                        lostPacketsAgg += fs.lostPackets;
+                        txBytesAgg += fs.txBytes;
+                        rxBytesAgg += fs.rxBytes;
+                    }
+                }
+                // Calculer perte et moyenne de délai/jitter si possible
+                if (txPacketsAgg > 0)
+                {
+                    lossPct = (double)(txPacketsAgg - rxPacketsAgg) * 100.0 / (double)txPacketsAgg;
+                }
+                if (rxPacketsAgg > 0)
+                {
+                    // Pour delay/jitter, nous allons calculer via toutes les flows correspondantes
+                    Time delaySum = Seconds(0.0);
+                    Time jitterSum = Seconds(0.0);
+                    for (auto &kv2 : stats)
+                    {
+                        FlowMonitor::FlowStats fs = kv2.second;
+                        Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(kv2.first);
+                        if ((t.destinationAddress == nodeIp && t.destinationPort == port) || (t.sourceAddress == nodeIp && t.sourcePort == port))
+                        {
+                            delaySum += fs.delaySum;
+                            jitterSum += fs.jitterSum;
+                        }
+                    }
+                    meanDelayMs = (delaySum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
+                    meanJitterMs = (jitterSum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
+                }
+            }
+
             // Affichage dans la console
-            std::cout << appType << " (Node " << nodeId << ", Port " << port << ") | Received: " 
-                      << totalReceivedBytes << " Bytes | Throughput: " 
-                      << std::fixed << std::setprecision(3) << throughputMbps << " Mbps" 
-                      << std::endl;
+            std::cout << appType << " (Nœud " << nodeId << ", Port " << port << ") | Reçu: " 
+                      << totalReceivedBytes << " Octets | Débit: " 
+                      << std::fixed << std::setprecision(3) << throughputMbps << " Mbps";
+            if (monitor && classifier) {
+                std::cout << " | Perte: " << std::fixed << std::setprecision(3) << lossPct << "% | Délai moyen: " << meanDelayMs << " ms | Jitter moyen: " << meanJitterMs << " ms";
+            }
+            std::cout << std::endl;
 
             // Sauvegarde dans le fichier au format XML
             resultsFile << "  <Result type=\"" << appType 
                         << "\" nodeId=\"" << nodeId 
                         << "\" port=\"" << port 
-                        << "\" receivedBytes=\"" << totalReceivedBytes 
-                        << "\" throughputMbps=\"" << std::fixed << std::setprecision(3) << throughputMbps 
-                        << "\" lossRatePct=\"N/A\" />" << std::endl;
+                        << "\" octetsRecus=\"" << totalReceivedBytes 
+                        << "\" debitMbps=\"" << std::fixed << std::setprecision(3) << throughputMbps 
+                        << "\" tauxPertePct=\"" << std::fixed << std::setprecision(3) << lossPct 
+                        << "\" moyenneDelaiMs=\"" << std::fixed << std::setprecision(3) << meanDelayMs 
+                        << "\" moyenneJitterMs=\"" << std::fixed << std::setprecision(3) << meanJitterMs 
+                        << "\" />" << std::endl;
         }
     }
     
     resultsFile << "</SimulationMetrics>" << std::endl;
     resultsFile.close();
-    NS_LOG_INFO("Metrics saved to simulation-domestique-metrics.xml");
+    // Si demandé, ouvrir et écrire un CSV avec des métriques détaillées de flux via FlowMonitor
+    if (enableCsv && monitor && classifier)
+    {
+        // Préparer le classifier et récupérer les statistiques
+        // 'classifier' doit provenir de FlowMonitorHelper créé par RunSimulation
+        std::ofstream csvFile;
+        csvFile.open(csvOutput);
+        csvFile << "flowId,srcAddr,srcPort,dstAddr,dstPort,txPackets,rxPackets,lostPackets,lossPct,txBytes,rxBytes,throughputMbps,meanDelayMs,meanJitterMs" << std::endl;
+        std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
+        for (auto &kv : stats)
+        {
+            FlowId flowId = kv.first;
+            FlowMonitor::FlowStats fs = kv.second;
+            Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(flowId);
+            double lossPct = 0.0;
+            if (fs.txPackets > 0)
+            {
+                lossPct = (double)(fs.txPackets - fs.rxPackets) * 100.0 / (double)fs.txPackets;
+            }
+            double durationSeconds = (fs.timeLastTxPacket.GetSeconds() - fs.timeFirstTxPacket.GetSeconds());
+            double throughputMbps = 0.0;
+            if (durationSeconds > 0.0)
+            {
+                throughputMbps = (fs.rxBytes * 8.0) / (durationSeconds * 1000000.0);
+            }
+            double meanDelayMs = 0.0;
+            if (fs.rxPackets > 0)
+            {
+                meanDelayMs = (fs.delaySum.GetSeconds() / (double)fs.rxPackets) * 1000.0;
+            }
+            double meanJitterMs = 0.0;
+            if (fs.rxPackets > 0)
+            {
+                meanJitterMs = (fs.jitterSum.GetSeconds() / (double)fs.rxPackets) * 1000.0;
+            }
+            csvFile << flowId << "," << t.sourceAddress << "," << t.sourcePort << "," << t.destinationAddress << "," << t.destinationPort << ","
+                    << fs.txPackets << "," << fs.rxPackets << "," << fs.lostPackets << "," << lossPct << "," << fs.txBytes << "," << fs.rxBytes << "," << std::fixed << std::setprecision(6) << throughputMbps << "," << meanDelayMs << "," << meanJitterMs << std::endl;
+        }
+        csvFile.close();
+        NS_LOG_INFO("CSV des métriques FlowMonitor sauvegardées dans " << csvOutput);
+        // Ajouter un résumé par application (sink) si demandé
+        std::ofstream csvSummary;
+        std::string summaryName = std::string("summary-") + csvOutput;
+        csvSummary.open(summaryName);
+        csvSummary << "nodeId,port,appType,txPackets,rxPackets,lostPackets,lossPct,txBytes,rxBytes,throughputMbps,meanDelayMs,meanJitterMs" << std::endl;
+        std::map<FlowId, FlowMonitor::FlowStats> stats2 = monitor->GetFlowStats();
+        for (const auto& pairNode : g_installedSinks)
+        {
+            uint32_t nodeId = pairNode.first;
+            Ptr<Node> n = NodeList::GetNode(nodeId);
+            Ipv4Address nodeIp = GetFirstIpv4Address(n);
+            for (const auto& pairPort : pairNode.second)
+            {
+                uint16_t port = pairPort.first;
+                uint64_t txPacketsAgg = 0, rxPacketsAgg = 0, lostPacketsAgg = 0;
+                uint64_t txBytesAgg = 0, rxBytesAgg = 0;
+                Time delaySum = Seconds(0.0);
+                Time jitterSum = Seconds(0.0);
+                for (auto &kv2 : stats2)
+                {
+                    FlowMonitor::FlowStats fs = kv2.second;
+                    Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(kv2.first);
+                    if ((t.destinationAddress == nodeIp && t.destinationPort == port) || (t.sourceAddress == nodeIp && t.sourcePort == port))
+                    {
+                        txPacketsAgg += fs.txPackets;
+                        rxPacketsAgg += fs.rxPackets;
+                        lostPacketsAgg += fs.lostPackets;
+                        txBytesAgg += fs.txBytes;
+                        rxBytesAgg += fs.rxBytes;
+                        delaySum += fs.delaySum;
+                        jitterSum += fs.jitterSum;
+                    }
+                }
+                double lossPct = 0.0;
+                if (txPacketsAgg > 0) lossPct = (double)(txPacketsAgg - rxPacketsAgg) * 100.0 / (double)txPacketsAgg;
+                double meanDelayMs = 0.0, meanJitterMs = 0.0, throughputMbps = 0.0;
+                if (rxPacketsAgg > 0) {
+                    meanDelayMs = (delaySum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
+                    meanJitterMs = (jitterSum.GetSeconds() / (double)rxPacketsAgg) * 1000.0;
+                }
+                if (DUREE_SIMULATION > 0)
+                {
+                    throughputMbps = (rxBytesAgg * 8.0) / (DUREE_SIMULATION * 1000000.0);
+                }
+                // Déduire le type d'application (même mapping que plus haut)
+                std::string appType = "Inconnu";
+                switch (port)
+                {
+                    case 9001: appType = "Caméra"; break;
+                    case 9002: appType = "Capteur"; break;
+                    case 9003: appType = "AssistantVocal"; break;
+                    case 9004: appType = "Téléchargement"; break;
+                    case 9005: appType = "VoIP_LiaisonMontante"; break;
+                    case 9006: appType = "VoIP_LiaisonDescendante"; break;
+                    case 9007: appType = "Domotique"; break;
+                    case 9008: appType = "Diffusion"; break;
+                    case 9009: appType = "Sonnette"; break;
+                    case 9010: appType = "MiseAJourFirmware"; break;
+                    case 9011: appType = "Supervision"; break;
+                }
+                csvSummary << nodeId << "," << port << "," << appType << "," << txPacketsAgg << "," << rxPacketsAgg << "," << lostPacketsAgg << "," << lossPct << "," << txBytesAgg << "," << rxBytesAgg << "," << throughputMbps << "," << meanDelayMs << "," << meanJitterMs << std::endl;
+            }
+        }
+        csvSummary.close();
+        NS_LOG_INFO("Résumé CSV par application sauvegardé dans " << summaryName);
+    }
+    NS_LOG_INFO("Métriques sauvegardées dans simulation-domestique-metrics.xml");
 }
 
 
-void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flowOutput)
+void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flowOutput, bool enablePcap, bool enableCsv, const std::string &csvOutput)
 {
     // --- 1. Création des Nœuds ---
     NodeContainer clientNodes;
@@ -493,28 +656,17 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     if (forceAc)
     {
         wifiHelper.SetStandard(WIFI_STANDARD_80211ac);
-        NS_LOG_INFO("J'impose Wi-Fi standard: 802.11ac");
+        NS_LOG_INFO("J'impose le standard Wi‑Fi : 802.11ac");
     }
     else
     {
-        NS_LOG_INFO("Using default Wi-Fi standard (no force).");
+        NS_LOG_INFO("Utilisation du standard Wi‑Fi par défaut (sans contrainte). ");
     }
 
-    // Piste d'amélioration : gestionnaire de taux réaliste
-    // Use Minstrel HT manager for high throughput modes (supports HT/VHT)
+    
+    // Utilisation de Minstrel HT manager pour les modes haut débit (supporte HT/VHT)
     wifiHelper.SetRemoteStationManager("ns3::MinstrelHtWifiManager");
 
-    // Tentative de sélection de la norme 802.11ac (la directive a fonctionné dans la sortie précédente)
-    // Nous gardons la directive pour la portabilité
-    // #if defined(WIFI_STANDARD_80211ac)
-    //     wifiHelper.SetStandard(WIFI_STANDARD_80211ac);
-    //     NS_LOG_INFO("Selected Wi-Fi standard via enum: 802.11ac");
-    // #elif defined(WIFI_PHY_STANDARD_80211ac)
-    //     wifiHelper.SetStandard(WIFI_PHY_STANDARD_80211ac);
-    //     NS_LOG_INFO("Selected Wi-Fi standard via macro: 802.11ac");
-    // #else
-    //     NS_LOG_WARN("No recognised 802.11ac standard found; falling back to default.");
-    // #endif
     
     WifiMacHelper macHelper;
     Ssid ssid = Ssid("MaisonConnectee");
@@ -531,35 +683,35 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     Ptr<WifiNetDevice> apWifiDev = DynamicCast<WifiNetDevice>(apDevice.Get(0));
     if (apWifiDev)
     {
-        NS_LOG_INFO("AP WifiNetDevice type: " << apWifiDev->GetInstanceTypeId().GetName());
+            NS_LOG_INFO("Type de WifiNetDevice AP : " << apWifiDev->GetInstanceTypeId().GetName());
         Ptr<WifiPhy> apPhy = apWifiDev->GetPhy();
         if (apPhy)
         {
-            NS_LOG_INFO("AP Phy type: " << apPhy->GetInstanceTypeId().GetName());
-            NS_LOG_INFO("AP Phy configured standard: " << apPhy->GetStandard());
-            NS_LOG_INFO("AP Phy band: " << apPhy->GetPhyBand());
+            NS_LOG_INFO("Type Phy AP : " << apPhy->GetInstanceTypeId().GetName());
+            NS_LOG_INFO("Standard Phy AP configuré : " << apPhy->GetStandard());
+            NS_LOG_INFO("Bande Phy AP : " << apPhy->GetPhyBand());
         }
         Ptr<WifiRemoteStationManager> apRsm = apWifiDev->GetRemoteStationManager();
         if (apRsm)
         {
-            NS_LOG_INFO("AP RemoteStationManager: " << apRsm->GetInstanceTypeId().GetName());
+            NS_LOG_INFO("RemoteStationManager AP : " << apRsm->GetInstanceTypeId().GetName());
         }
     }
     Ptr<WifiNetDevice> staWifiDev = DynamicCast<WifiNetDevice>(clientDevices.Get(0));
     if (staWifiDev)
     {
-        NS_LOG_INFO("STA WifiNetDevice type: " << staWifiDev->GetInstanceTypeId().GetName());
+        NS_LOG_INFO("Type de WifiNetDevice STA : " << staWifiDev->GetInstanceTypeId().GetName());
         Ptr<WifiPhy> staPhy = staWifiDev->GetPhy();
         if (staPhy)
         {
-            NS_LOG_INFO("STA Phy type: " << staPhy->GetInstanceTypeId().GetName());
-            NS_LOG_INFO("STA Phy configured standard: " << staPhy->GetStandard());
-            NS_LOG_INFO("STA Phy band: " << staPhy->GetPhyBand());
+            NS_LOG_INFO("Type Phy STA : " << staPhy->GetInstanceTypeId().GetName());
+            NS_LOG_INFO("Standard Phy STA configuré : " << staPhy->GetStandard());
+            NS_LOG_INFO("Bande Phy STA : " << staPhy->GetPhyBand());
         }
         Ptr<WifiRemoteStationManager> staRsm = staWifiDev->GetRemoteStationManager();
         if (staRsm)
         {
-            NS_LOG_INFO("STA RemoteStationManager: " << staRsm->GetInstanceTypeId().GetName());
+            NS_LOG_INFO("RemoteStationManager STA : " << staRsm->GetInstanceTypeId().GetName());
         }
     }
     
@@ -572,7 +724,7 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     NetDeviceContainer serverDevices;
     std::vector<NetDeviceContainer> p2pLinks;
 
-    // Use a different /24 network per point-to-point link (10.2.x.0/24 ...)
+    // Utiliser un réseau /24 différent par lien point-à-point (10.2.x.0/24 ...)
     Ipv4AddressHelper p2pAddress;
     p2pAddress.SetBase("10.2.1.0", "255.255.255.0");
     
@@ -598,7 +750,7 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     address.Assign(apDevice);
     address.Assign(clientDevices);
 
-    // Assign IP addresses to each point-to-point link created earlier
+    // Assigner des adresses IP à chaque lien point-à-point créé plus tôt
     for (auto &link : p2pLinks)
     {
         p2pAddress.Assign(link);
@@ -606,16 +758,16 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     }
     // serverDevices were assigned via the p2pAddress per-link above
 
-    // Populate global routing tables to enable forwarding/routing across AP and point-to-point links
+    // Remplir les tables de routage globales pour permettre le routage entre AP et liens point-à-point
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
     
-    // Debug: afficher les adresses IP (inchangé)
-    NS_LOG_INFO ("Assigned addresses for servers and clients:");
+    // Débogage : afficher les adresses IP (inchangé)
+    NS_LOG_INFO ("Adresses assignées pour les serveurs et clients :");
     for (uint32_t i = 0; i < serverNodes.GetN (); ++i)
     {
         Ptr<Node> node = serverNodes.Get (i);
         Ipv4Address addr = GetFirstIpv4Address(node);
-        NS_LOG_INFO ("Server " << i << " -> " << addr);
+        NS_LOG_INFO ("Serveur " << i << " -> " << addr);
     }
     for (uint32_t i = 0; i < clientNodes.GetN (); ++i)
     {
@@ -647,34 +799,45 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     Ptr<FlowMonitor> monitor;
     if (enableFlowMonitor)
     {
-        NS_LOG_INFO("Installing FlowMonitor on all nodes");
+        NS_LOG_INFO("Installation du FlowMonitor sur tous les nœuds");
         monitor = flowmon.InstallAll();
+        // Récupérer le classifieur qui a été utilisé pour identifier les flux
+        Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
     }
 
     // --- 8. Collecte de Traces PCAP ---
-    phyHelper.EnablePcapAll("traces-simulation-domestique", true);
+    if (enablePcap)
+    {
+        NS_LOG_INFO("Activation de la capture PCAP : traces-simulation-domestique*");
+        phyHelper.EnablePcapAll("traces-simulation-domestique", true);
+    }
 
     // --- 8. Lancement de la Simulation ---
     Simulator::Stop (Seconds(DUREE_SIMULATION));
     Simulator::Run ();
     
-    // --- Optional: FlowMonitor serialization ---
+    // --- Optionnel : sérialisation du FlowMonitor ---
     if (enableFlowMonitor)
     {
         if (monitor)
         {
             monitor->CheckForLostPackets();
             flowmon.SerializeToXmlFile(flowOutput, true, true);
-            NS_LOG_INFO("FlowMonitor saved to " << flowOutput);
+            NS_LOG_INFO("FlowMonitor enregistré dans " << flowOutput);
         }
         else
         {
-            NS_LOG_WARN("FlowMonitor was enabled but monitor pointer is null");
+            NS_LOG_WARN("FlowMonitor activé mais le pointeur 'monitor' est nul");
         }
     }
 
     // --- 9. Post-traitement et Extraction de Métriques ---
-    CalculateMetrics();
+        // Appeler le calcul des métriques en transmettant le monitor et le classifier si disponibles
+        Ptr<Ipv4FlowClassifier> classifierPtr = 0;
+        if (enableFlowMonitor) {
+            classifierPtr = DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
+        }
+        CalculateMetrics(monitor, classifierPtr, enableCsv, csvOutput);
 }
 
 
@@ -691,18 +854,29 @@ int main (int argc, char *argv[])
     // Désactive les avertissements de la table de routage (recommandé pour ce type de topo)
     LogComponentEnable("Ipv4GlobalRouting", LOG_LEVEL_WARN);
 
-    // CLI parameters
+    // Paramètres CLI
     bool forceAc = true;
     bool enableFlowMonitor = false;
     std::string flowOutput = "traces_de_simulation.xml";
+    // Option to control the simulation duration, PCAP capture et CSV
+    bool enablePcap = false; // disabled by default to avoid large files
+    double duration = DUREE_SIMULATION;
+    bool enableCsv = false;
+    std::string csvOutput = "simulation-domestique-metrics.csv";
 
     CommandLine cmd;
     cmd.AddValue("forceAc", "Force Wi-Fi standard to 802.11ac", forceAc);
     cmd.AddValue("enableFlowMonitor", "Enable FlowMonitor and write XML", enableFlowMonitor);
     cmd.AddValue("flowOutput", "FlowMonitor output filename", flowOutput);
+    cmd.AddValue("enableCsv", "Enable CSV export of FlowMonitor metrics", enableCsv);
+    cmd.AddValue("csvOutput", "CSV output filename if enableCsv=true", csvOutput);
+    cmd.AddValue("duration", "Simulation duration in seconds", duration);
+    cmd.AddValue("enablePcap", "Enable PCAP capture (can generate large files)", enablePcap);
     cmd.Parse(argc, argv);
 
-    RunSimulation(forceAc, enableFlowMonitor, flowOutput);
+    // Appliquer les options spécifiées en CLI
+    DUREE_SIMULATION = duration;
+    RunSimulation(forceAc, enableFlowMonitor, flowOutput, enablePcap, enableCsv, csvOutput);
 
     Simulator::Destroy ();
     return 0;

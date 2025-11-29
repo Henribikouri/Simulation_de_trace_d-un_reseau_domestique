@@ -15,6 +15,25 @@ Résumé rapide:
 ./ns3 run scratch/simulation-domestique
 ```
 
+Options utiles:
+- `--duration=<seconds>` : durée de la simulation (par défaut 600)
+- `--enablePcap=<true|false>` : activer/désactiver la capture PCAP (désactivée par défaut)
+- `--enableFlowMonitor=<true|false>` : activer FlowMonitor (par défaut désactivé)
+
+Exemples d'exécution:
+
+1) Test rapide (10s) sans pcap ni FlowMonitor:
+
+```bash
+./ns3 run scratch/simulation-domestique -- --duration=10 --enablePcap=false --enableFlowMonitor=false
+```
+
+2) Exécution complète (600s) et capture PCAP & FlowMonitor activés :
+
+```bash
+./ns3 run scratch/simulation-domestique -- --duration=600 --enablePcap=true --enableFlowMonitor=true --flowOutput=traces_de_simulation.xml
+```
+
 Notes pour l'enseignant:
 - Les fichiers de trace `.pcap` sont volumineux et ne sont pas inclus dans le dépôt. Je peux fournir un paquet séparé sur demande ou indiquer comment régénérer les traces localement en lançant la simulation.
 - Le code source principal est dans `scratch/simulation-domestique.cc`. Les utilitaires et tests sont dans le dossier `utils/`.
