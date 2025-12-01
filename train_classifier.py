@@ -1,3 +1,8 @@
+# *************** CODE SOURCE DE BIKOURI HENRI **********************
+
+#************* Mon site web : henribikouri.github.io *************************
+#*********************Email : henri.bikouri@enspy-uy1.cm ****************************
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -35,7 +40,7 @@ def train_model():
     print("Aperçu des données :")
     print(df.head())
 
-    # Séparation Features (X) / Cible (y)
+    
     # On retire l'identifiant CHUNK_ID qui n'est pas une feature prédictive
     X = df.drop(['LABEL', 'CHUNK_ID'], axis=1)
     y = df['LABEL']
