@@ -1,3 +1,8 @@
+# *************** CODE SOURCE DE BIKOURI HENRI **********************
+
+#************* Mon site web : henribikouri.github.io *************************
+#*********************Email : henri.bikouri@enspy-uy1.cm ****************************
+
 import csv
 import sys
 import time
@@ -41,7 +46,7 @@ def process_pcap_files():
             continue
 
         # Stockage temporaire pour ce fichier : { FlowKey : [packets...] }
-        # FlowKey = (SrcIP, DstIP, SrcPort, DstPort, Proto)
+
         flows = defaultdict(list)
 
         for pkt in reader:
@@ -49,7 +54,7 @@ def process_pcap_files():
             if IP not in pkt: continue
             
             ip = pkt[IP]
-            # Identifier le port d'application (Label)
+            # Identifie le port d'application (Label)
             label = None
             
             if UDP in ip:
@@ -61,7 +66,7 @@ def process_pcap_files():
             else:
                 continue
 
-            # Vérifier si c'est un flux d'intérêt
+            # Vérifie si c'est un flux d'intérêt
             if dport in PORT_TO_LABEL: label = PORT_TO_LABEL[dport]
             elif sport in PORT_TO_LABEL: label = PORT_TO_LABEL[sport]
             
