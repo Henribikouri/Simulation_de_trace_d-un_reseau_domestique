@@ -1,6 +1,6 @@
 # Simulation_de_trace_d-un_reseau_domestique
 
-Ce dépôt contient le travail de simulation réseau réalisé avec ns-3 pour un projet pédagogique. Il présente une simulation d'un réseau domestique (clients Wi‑Fi, point d'accès, trafic généré), les scripts et utilitaires utilisés pour lancer et analyser les traces.
+Ce dépôt contient le travail de simulation réseau réalisé avec ns-3 . Il présente une simulation d'un réseau domestique (clients Wi‑Fi, point d'accès, trafic généré), les scripts et utilitaires utilisés pour lancer et analyser les traces.
 
 Auteur: Henri Bikouri <henri.bikouri@enspy-uy1.cm>
 
