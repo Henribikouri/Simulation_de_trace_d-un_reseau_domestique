@@ -1,11 +1,16 @@
+# *************** CODE SOURCE DE BIKOURI HENRI **********************
+
+#************* Mon site web : henribikouri.github.io *************************
+#*********************Email : henri.bikouri@enspy-uy1.cm ****************************
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
 # Configuration
 CSV_FILE_PATH = 'metrics_test.csv' 
-OUTPUT_PLOT_PATH_THROUGHPUT = 'demo_results_throughput.png'
-OUTPUT_PLOT_PATH_QOS = 'demo_results_qos.png' # fichier de sortie pour la QoS
+OUTPUT_PLOT_PATH_THROUGHPUT = 'demo_results_throughput.png' # image de sortie pour debits
+OUTPUT_PLOT_PATH_QOS = 'demo_results_qos.png' # images de sortie pour la QoS
 
 # Mapping complet des ports aux applications
 PORT_TO_APP_NAME = {
@@ -34,7 +39,7 @@ def analyze_and_plot_results(csv_path):
 
     df = pd.read_csv(csv_path)
 
-    # Assurez-vous d'utiliser la bonne colonne (celle qui est la métrique de débit)
+    # colone utilisees a partir de mon dataset
     THROUGHPUT_COLUMN = 'throughputMbps'
     DELAY_COLUMN = 'meanDelayMs'
     LOSS_COLUMN = 'lossPct'
@@ -51,7 +56,7 @@ def analyze_and_plot_results(csv_path):
     delay_by_app = active_df.groupby('dstPort')[DELAY_COLUMN].mean()
     loss_by_app = active_df.groupby('dstPort')[LOSS_COLUMN].mean()
 
-    # Remplacer les ports par des noms d'applications pour l'affichage
+    # Remplace les ports par des noms d'applications pour l'affichage
     def get_app_names(series_index):
         return [PORT_TO_APP_NAME.get(port, f"Port {port} Inconnu") 
                 for port in series_index]
@@ -94,7 +99,7 @@ def analyze_and_plot_results(csv_path):
     # Axe Y2 : Taux de Perte de Paquets (%)
     ax2 = ax1.twinx()  # Créer un second axe Y partageant le même axe X
     color = '#1f77b4' # Bleu
-    # Nous utilisons plot() et non bar() pour la perte pour la distinguer
+    # J' utilise plot() et non bar() pour la perte pour la distinguer
     line_loss = ax2.plot(app_names_qos, loss_by_app.values, color=color, marker='o', linestyle='-', linewidth=2, label='Perte de Paquets (%)')
     ax2.set_ylabel('Perte de Paquets (%)', color=color, fontsize=14)
     ax2.tick_params(axis='y', labelcolor=color)
