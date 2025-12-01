@@ -418,7 +418,7 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
             // Débit = (Octets reçus * 8) / (Durée de simulation * 10^6)
             double throughputMbps = (totalReceivedBytes * 8.0) / (DUREE_SIMULATION * 1000000.0);
             
-            // Trouver le type d'application basé sur le port (approximatif)
+            // Trouve le type d'application basé sur le port (approximatif)
             std::string appType = "Inconnu";
             switch (port)
             {
@@ -435,7 +435,7 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
                 case 9011: appType = "Supervision"; break;
             }
             
-            // Recueillir métriques additionnelles si FlowMonitor/Classifier disponibles
+            // Recueil les  métriques additionnelles si FlowMonitor/Classifier disponibles
             double lossPct = 0.0;
             double meanDelayMs = 0.0;
             double meanJitterMs = 0.0;
@@ -443,7 +443,7 @@ void CalculateMetrics(Ptr<FlowMonitor> monitor = 0, Ptr<Ipv4FlowClassifier> clas
             uint64_t txBytesAgg = 0, rxBytesAgg = 0;
             if (monitor && classifier)
             {
-                // Aggréger les statistiques de flow correspondant à ce sink (destination = node IP & port)
+                // Aggrége les statistiques de flow correspondant à ce sink (destination = node IP & port)
                 Ptr<Node> n = NodeList::GetNode(nodeId);
                 Ipv4Address nodeIp = GetFirstIpv4Address(n);
                 std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
@@ -724,7 +724,7 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     NetDeviceContainer serverDevices;
     std::vector<NetDeviceContainer> p2pLinks;
 
-    // Utiliser un réseau /24 différent par lien point-à-point (10.2.x.0/24 ...)
+    
     Ipv4AddressHelper p2pAddress;
     p2pAddress.SetBase("10.2.1.0", "255.255.255.0");
     
@@ -744,7 +744,7 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
 
     // Adressage stratégique : 10.1.1.0/24
     Ipv4AddressHelper address; 
-    address.SetBase ("10.1.1.0", "255.255.255.0"); // Fixed subnet mask here
+    address.SetBase ("10.1.1.0", "255.255.255.0"); 
     
     // Attribution des adresses IP aux interfaces
     address.Assign(apDevice);
@@ -756,12 +756,12 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
         p2pAddress.Assign(link);
         p2pAddress.NewNetwork();
     }
-    // serverDevices were assigned via the p2pAddress per-link above
+    
 
-    // Remplir les tables de routage globales pour permettre le routage entre AP et liens point-à-point
+    // Remplissage des tables de routage globales pour permettre le routage entre AP et liens point-à-point
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
     
-    // Débogage : afficher les adresses IP (inchangé)
+    // Débogage : j'affiche les adresses IP 
     NS_LOG_INFO ("Adresses assignées pour les serveurs et clients :");
     for (uint32_t i = 0; i < serverNodes.GetN (); ++i)
     {
@@ -794,7 +794,7 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
 
     NS_ASSERT (nextClientIndex == N_EQUIPMENTS); 
 
-    // --- 7. FlowMonitor (optionnel) ---
+    // --- 7. FlowMonitor  ---
     FlowMonitorHelper flowmon;
     Ptr<FlowMonitor> monitor;
     if (enableFlowMonitor)
@@ -838,7 +838,7 @@ void RunSimulation(bool forceAc, bool enableFlowMonitor, const std::string &flow
     }
 
     // --- 9. Post-traitement et Extraction de Métriques ---
-        // Appeler le calcul des métriques en transmettant le monitor et le classifier si disponibles
+        // J'appele le calcul des métriques en transmettant le monitor et le classifier 
         Ptr<Ipv4FlowClassifier> classifierPtr = 0;
         if (enableFlowMonitor) {
             classifierPtr = DynamicCast<Ipv4FlowClassifier>(flowmon.GetClassifier());
@@ -857,15 +857,15 @@ int main (int argc, char *argv[])
     debutAleatoire->SetAttribute("Min", DoubleValue(0.0));
     debutAleatoire->SetAttribute("Max", DoubleValue(5.0)); // Aléa [0, 5] secondes
 
-    // Désactive les avertissements de la table de routage (recommandé pour ce type de topo)
+    // Désactive les avertissements de la table de routage 
     LogComponentEnable("Ipv4GlobalRouting", LOG_LEVEL_WARN);
 
     // Paramètres CLI
     bool forceAc = true;
     bool enableFlowMonitor = false;
     std::string flowOutput = "traces_de_simulation.xml";
-    // Option to control the simulation duration, PCAP capture et CSV
-    bool enablePcap = false; // disabled by default to avoid large files
+    // Options de controle de la duree de simulation ,  capture PCAP et CSV
+    bool enablePcap = false; 
     double duration = DUREE_SIMULATION;
     bool enableCsv = false;
     std::string csvOutput = "simulation-domestique-metrics.csv";
@@ -880,7 +880,7 @@ int main (int argc, char *argv[])
     cmd.AddValue("enablePcap", "Enable PCAP capture (can generate large files)", enablePcap);
     cmd.Parse(argc, argv);
 
-    // Appliquer les options spécifiées en CLI
+    // J'applique les options spécifiées en CLI
     DUREE_SIMULATION = duration;
     RunSimulation(forceAc, enableFlowMonitor, flowOutput, enablePcap, enableCsv, csvOutput);
 
